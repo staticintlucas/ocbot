@@ -1,0 +1,38 @@
+---
+server: 689096655953199229
+
+roles:
+  message: 1130259547345395754
+
+  list:
+  - name: oblique
+    role: 815721015333486594
+    emoji: 837672178802622474
+
+  - name: ta-origins
+    role: 810973184005636106
+    emoji: 845674688680034346
+
+commands:
+- command: oblique
+  description: Latest updates on Oblique ][
+  file: oblique.png
+
+- command: ta-origins
+  description: Latest updates on TA Origins
+  text: >-
+    Since ePBT took their sweet time producing samples other keysets have popped up with the same
+    inspiration. Given that very similar sets are readily available on Aliexpress I don't see much
+    point in running TA Origins as originally intended.
+
+    Although if we find a way to differentiate the sets... tripleshot maybe?
+
+- command: onyx
+  description: Latest updates on Onyx
+  text: >-
+    Now that the Onyx GB has completed and Emils (funderburker) has his own Discord server we've
+    archived the Onyx channels.
+
+    However, if you want to discuss Onyx (or any of Emils' other projects) some more you can join
+    Skepur's house: https://discord.gg/Wds2wtRFjh
+...
