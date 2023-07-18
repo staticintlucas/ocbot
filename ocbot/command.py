@@ -21,11 +21,14 @@ class Command(app_commands.Command):
 
         async def callback(interaction: discord.Interaction):
             client: Client = interaction.client
+            client.log.info(f"Slash command {interaction.command.name!r}")
 
             text = "\n\n".join(config.text.splitlines()) if config.text is not None else ""
             file = discord.File(Path() / "files" / config.file) if config.file is not None else discord.utils.MISSING
 
             await interaction.response.send_message(text, file=file)
+
+            client.log.info(f"Responded to slash command {interaction.command.name!r}")
 
         super().__init__(
             name=config.command,
