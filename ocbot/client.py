@@ -8,6 +8,7 @@ from .command import Command, CommandConfig
 
 
 class RolesConfig(NamedTuple):
+    channel_id: int
     message_id: int
     from_emoji: dict[int, int]
 
@@ -20,6 +21,7 @@ class Client(discord.Client):
 
             # Roles configuration
             self.roles = RolesConfig(
+                channel_id=config["roles"]["channel"],
                 message_id=config["roles"]["message"],
                 from_emoji={item["emoji"]: item["role"] for item in config["roles"]["list"]},
             )
@@ -81,23 +83,29 @@ class Client(discord.Client):
         self.log.info(f"Connected to guild {guild.name!r} (id={guild.id})")
 
     async def _add_remove_role(self, payload: discord.RawReactionActionEvent, add: bool) -> None:
+        # Check guild
         assert payload.guild_id is not None  # Should never happen
+        guild = self.get_guild(payload.guild_id)
+        assert guild is not None  # Should never happen
 
-        # Unknown guild
         if payload.guild_id != self.server_id:
-            guild = self.get_guild(payload.guild_id)
-            assert guild is not None  # Should never happen
             self.log.info(f"Ignoring reaction in guild {guild.name!r} (id={guild.id})")
             return
 
-        # Wrong message
+        # Check channel
+        if payload.channel_id != self.roles.channel_id:
+            self.log.info(f"Ignoring reaction in channel with id={payload.channel_id})")
+            return
+
+        # Check message
         if payload.message_id != self.roles.message_id:
-            self.log.info(f"Ignoring reaction on message id={payload.message_id}")
+            self.log.info(f"Ignoring reaction on message with id={payload.message_id}")
             return
 
         # Log emoji
         emoji = payload.emoji
         assert emoji.id is not None  # Should never happen
+
         add_str = "add" if add else "remove"
         self.log.info(f"Reaction {add_str} {emoji.name!r} to message id={payload.message_id}")
 
@@ -108,8 +116,6 @@ class Client(discord.Client):
             self.log.info(f"Ignoring reaction {emoji.name!r} (id={emoji.id}), no matching role")
             return
 
-        guild = self.get_guild(payload.guild_id)
-        assert guild is not None  # Should never happen
         role = discord.utils.get(guild.roles, id=role_id)
         if role is None:
             self.log.error(f"No role found with id={role_id}")
