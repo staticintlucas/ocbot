@@ -12,7 +12,7 @@ from .command import Command, CommandConfig
 class RolesConfig(NamedTuple):
     channel_id: int
     message_id: int
-    from_emoji: dict[int, int]
+    from_emoji: dict[int | str, int]
 
 
 class Client(discord.Client):
@@ -83,7 +83,7 @@ class Client(discord.Client):
 
         # Try react with each role emoji
         for emoji_id in roles.from_emoji.keys():
-            emoji = guild.get_emoji(emoji_id)
+            emoji = guild.get_emoji(emoji_id) if isinstance(emoji_id, int) else emoji_id
 
             # Ensure the emoji exists
             if emoji is None:
@@ -137,14 +137,15 @@ class Client(discord.Client):
 
         # Log emoji
         emoji = payload.emoji
-        assert emoji.id is not None  # Should never happen
+        emoji_id = emoji.id if emoji.is_custom_emoji() else emoji.name
+        assert emoji_id is not None  # Should never happen
 
         add_str = "add" if add else "remove"
         self.log.info(f"Reaction {add_str} {emoji.name!r} to message id={payload.message_id}")
 
         # Get role
         try:
-            role_id = self.roles.from_emoji[emoji.id]
+            role_id = self.roles.from_emoji[emoji_id]
         except KeyError:
             self.log.info(f"Ignoring reaction {emoji.name!r} (id={emoji.id}), no matching role")
             return
