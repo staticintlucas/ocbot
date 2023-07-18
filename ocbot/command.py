@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, Optional
+from typing import TYPE_CHECKING, Any, NamedTuple
 
 import discord
 from discord import app_commands
@@ -14,8 +16,8 @@ _files = _root / "files"
 class CommandConfig(NamedTuple):
     command: str
     description: str
-    text: Optional[str]
-    file: Optional[str | Path]
+    text: str | None
+    file: str | Path | None
 
 
 class Command(app_commands.Command[app_commands.Group, Any, Any]):
@@ -25,9 +27,7 @@ class Command(app_commands.Command[app_commands.Group, Any, Any]):
             discord.File(_files / config.file) if config.file is not None else discord.utils.MISSING
         )
 
-        async def callback(
-            interaction: discord.Interaction[Client], *_args: Any, **_kwargs: Any
-        ) -> None:
+        async def callback(interaction: discord.Interaction[Client]) -> None:
             assert interaction.command is not None  # Should never happen
 
             interaction.client.log.info(f"Slash command {interaction.command.name!r}")
