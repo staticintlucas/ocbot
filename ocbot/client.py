@@ -66,6 +66,32 @@ class Client(discord.Client):
 
         super().__init__(intents=intents, **kwargs)
 
+    async def _add_role_reactions(self, guild: discord.Guild) -> None:
+        roles = self.roles
+
+        # Check channel
+        channel = guild.get_channel(roles.channel_id)
+        if channel is None:
+            self.log.error(f"No channel found with id={roles.channel_id}")
+            return
+        if not isinstance(channel, discord.TextChannel):
+            self.log.error("Can't use reaction roles in non-text channel")
+            return
+
+        # Get message
+        message = channel.get_partial_message(roles.message_id)
+
+        # Try react with each role emoji
+        for emoji_id in roles.from_emoji.keys():
+            emoji = guild.get_emoji(emoji_id)
+
+            # Ensure the emoji exists
+            if emoji is None:
+                self.log.error(f"No emoji found with id={emoji_id}")
+                return
+
+            await message.add_reaction(emoji)
+
     async def on_ready(self) -> None:
         assert self.user is not None  # Should never happen
         self.log.info(f"Connected as {self.user.name!r} (id={self.user.id})")
@@ -73,8 +99,13 @@ class Client(discord.Client):
         # Check we're in the correct guild
         guild = self.get_guild(self.server_id)
         if guild is None:
-            self.log.error("Not connected to guild with requested id!")
+            self.log.error("Not connected to guild with requested id")
             return
+
+        self.log.info(f"Connected to guild {guild.name!r} (id={guild.id})")
+
+        # React to reaction role message
+        await self._add_role_reactions(guild)
 
         # Add slash commands
         self.tree = app_commands.CommandTree(self)
@@ -82,7 +113,7 @@ class Client(discord.Client):
             self.tree.add_command(Command(cmd), guild=guild)
         await self.tree.sync(guild=guild)
 
-        self.log.info(f"Connected to guild {guild.name!r} (id={guild.id})")
+        self.log.info("Completed on_ready event")
 
     async def _add_remove_role(self, payload: discord.RawReactionActionEvent, add: bool) -> None:
         # Check guild
