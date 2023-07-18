@@ -6,13 +6,14 @@ from discord import app_commands
 
 from .command import Command, CommandConfig
 
+
 class RolesConfig(NamedTuple):
     message_id: int
     from_emoji: dict[int, int]
 
-class Client(discord.Client):
 
-    def _load_config(self, config: dict[str, Any]):
+class Client(discord.Client):
+    def _load_config(self, config: dict[str, Any]) -> None:
         try:
             # Server id
             self.server_id = int(config["server"])
@@ -20,9 +21,7 @@ class Client(discord.Client):
             # Roles configuration
             self.roles = RolesConfig(
                 message_id=config["roles"]["message"],
-                from_emoji={
-                    item["emoji"]: item["role"] for item in config["roles"]["list"]
-                },
+                from_emoji={item["emoji"]: item["role"] for item in config["roles"]["list"]},
             )
 
             # Slash command configuration
@@ -39,9 +38,7 @@ class Client(discord.Client):
         except KeyError as e:
             raise ValueError(f"{e.args[0]!r} not set in config") from None
 
-
-    def __init__(self, config: dict[str, Any], /, **kwargs):
-
+    def __init__(self, config: dict[str, Any], /, **kwargs: Any):
         # Don't warn about missing PyNaCL dependency, we don't use voice anyway
         discord.VoiceClient.warn_nacl = False
 
@@ -65,14 +62,14 @@ class Client(discord.Client):
 
         super().__init__(intents=intents, **kwargs)
 
-
     async def on_ready(self) -> None:
+        assert self.user is not None  # Should never happen
         self.log.info(f"Connected as {self.user.name!r} (id={self.user.id})")
 
         # Check we're in the correct guild
         guild = self.get_guild(self.server_id)
         if guild is None:
-            self.log.error(f"Not connected to guild with requested id!")
+            self.log.error("Not connected to guild with requested id!")
             return
 
         # Add slash commands
@@ -83,12 +80,13 @@ class Client(discord.Client):
 
         self.log.info(f"Connected to guild {guild.name!r} (id={guild.id})")
 
-
     async def _add_remove_role(self, payload: discord.RawReactionActionEvent, add: bool) -> None:
+        assert payload.guild_id is not None  # Should never happen
 
         # Unknown guild
         if payload.guild_id != self.server_id:
             guild = self.get_guild(payload.guild_id)
+            assert guild is not None  # Should never happen
             self.log.info(f"Ignoring reaction in guild {guild.name!r} (id={guild.id})")
             return
 
@@ -99,6 +97,7 @@ class Client(discord.Client):
 
         # Log emoji
         emoji = payload.emoji
+        assert emoji.id is not None  # Should never happen
         add_str = "add" if add else "remove"
         self.log.info(f"Reaction {add_str} {emoji.name!r} to message id={payload.message_id}")
 
@@ -110,6 +109,7 @@ class Client(discord.Client):
             return
 
         guild = self.get_guild(payload.guild_id)
+        assert guild is not None  # Should never happen
         role = discord.utils.get(guild.roles, id=role_id)
         if role is None:
             self.log.error(f"No role found with id={role_id}")
@@ -118,33 +118,34 @@ class Client(discord.Client):
         # Just in case someone finds a way to add roles they shouldn't
         if add and role.permissions.value != 0:
             self.log.error(
-                f"Can't give role {role.name!r} (id={role.id}) with non-zero permissions value")
+                f"Can't give role {role.name!r} (id={role.id}) with non-zero permissions value"
+            )
             return
 
         # Add/remove member's roles
         member = guild.get_member(payload.user_id)
+        assert member is not None  # Should never happen
         if add:
             await member.add_roles(role)
             self.log.info(f"Gave {role.name!r} (id={role.id}) to {member.name!r} (id={member.id})")
         else:
             await member.remove_roles(role)
             self.log.info(
-                f"Removed {role.name!r} (id={role.id}) from {member.name!r} (id={member.id})")
-
+                f"Removed {role.name!r} (id={role.id}) from {member.name!r} (id={member.id})"
+            )
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
         await self._add_remove_role(payload, add=True)
 
-
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
         await self._add_remove_role(payload, add=False)
 
-
-    def run(self, token: str) -> None:
+    def run(self, token: str, **kwargs: Any) -> None:
         super().run(
             token=token,
-            log_handler=self.log.handlers[0],
-            log_formatter=self.log.handlers[0].formatter,
-            log_level=self.log.level,
-            root_logger=True,
+            log_handler=kwargs.pop("log_handler", self.log.handlers[0]),
+            log_formatter=kwargs.pop("log_formatter", self.log.handlers[0].formatter),
+            log_level=kwargs.pop("log_level", self.log.level),
+            root_logger=kwargs.pop("root_logger", True),
+            **kwargs,
         )
