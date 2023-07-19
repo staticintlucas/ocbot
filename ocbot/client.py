@@ -135,6 +135,12 @@ class Client(discord.Client):
             self.log.info(f"Ignoring reaction on message with id={payload.message_id}")
             return
 
+        # Check user
+        assert self.user is not None  # Should never happen, also is already checked in on_ready
+        if payload.user_id == self.user.id:
+            self.log.info("Ignoring reaction made by myself")
+            return
+
         # Log emoji
         emoji = payload.emoji
         emoji_id = emoji.id if emoji.is_custom_emoji() else emoji.name
